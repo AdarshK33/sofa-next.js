@@ -1,95 +1,171 @@
-import Image from "next/image";
+"use client";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+  useState,
+} from "react";
 import styles from "./page.module.css";
+import Image from "next/image";
+import ReactFlow, {
+  Background,
+  Controls,
+  applyNodeChanges,
+} from "react-flow-renderer";
+import "reactflow/dist/style.css";
+import CustomNode from "./components/CustomeNode";
+const imageUrls = [
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_82/item_661_82_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_172/item_661_172_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_58/item_661_58_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_108/item_661_108_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_149/item_661_149_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_150/item_661_150_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_157/item_661_157_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_158/item_661_158_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_627/item_661_627_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_78/item_661_78_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_628/item_661_628_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_79/item_661_79_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_389/item_661_389_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_390/item_661_390_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_64/item_661_64_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_66/item_661_66_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_83/item_661_83_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_84/item_661_84_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_674/item_661_674_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_675/item_661_675_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_358/item_661_358_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_691/item_661_691_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_690/item_661_690_2480_0.thumb.jpg?v=73",
+  "https://s3.ca-central-1.amazonaws.com/exocortex-crateandbarrel/exocortex-crateandbarrel/SectionalPlanner/661_709/item_661_709_2480_0.thumb.jpg?v=73",
+];
 
-export default function Home() {
+let id = 0;
+const getId = () => `dndnode_${id++}`;
+
+const Home = () => {
+  const reactFlowWrapper = useRef(null);
+
+  const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  const [nodes, setNodes] = useState([]);
+  const nodeTypes = useMemo(() => ({ imgNode: CustomNode }), []);
+
+  const onNodesChange = useCallback(
+    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    [setNodes]
+  );
+
+  const handleDragStart = (e, url) => {
+    e.dataTransfer.setData("application/reactflow", url);
+    e.dataTransfer.effectAllowed = "move";
+
+    console.log("eve", e);
+  };
+
+  const onDragOver = useCallback((event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const getImageDimensions = (url) => {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      img.onload = () => {
+        resolve({ width: img.width, height: img.height });
+      };
+      img.src = url;
+    });
+  };
+
+  const onDrop = useCallback(
+    async (event) => {
+      event.preventDefault();
+
+      const type = event.dataTransfer.getData("application/reactflow");
+
+      if (typeof type === "undefined" || !type) {
+        return;
+      }
+
+      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
+      const position = reactFlowInstance.project({
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top,
+      });
+
+      // Get the dimensions of the image
+      const { width: nodeWidth, height: nodeHeight } = await getImageDimensions(
+        type
+      );
+
+      const adjustedPosition = {
+        x: position.x - nodeWidth / 2,
+        y: position.y - nodeHeight / 2,
+      };
+
+      const newNode = {
+        id: getId(),
+        type: "imgNode",
+        position: adjustedPosition,
+        data: { url: type },
+      };
+
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [reactFlowInstance]
+  );
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>app/page.js</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className={styles.container}>
+      <div className={styles.section_planner}>
+        <div
+          ref={reactFlowWrapper}
+          height={648}
+          width={646}
+          className={styles.canvas}
+        >
+          <ReactFlow
+            nodes={nodes}
+            nodeTypes={nodeTypes}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onNodesChange={onNodesChange}
+            onInit={setReactFlowInstance}
+            // fitView
           >
-            <Image
-              className={styles.logo}
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
+            {/* <Background
+              style={{ backgroundColor: "#f6f7fc" }}
+              variant="dots"
+              gap={24}
+              size={1}
+            /> */}
+          </ReactFlow>
         </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <div className={styles.sofas_container}>
+          <div className={styles.heading}>Sectional Sofa Pieces</div>
+          <div className={styles.sofas}>
+            {imageUrls.map((url) => (
+              <div className={styles.img_container} key={url}>
+                <Image
+                  onDragStart={(e) => handleDragStart(e, url)}
+                  className={styles.img}
+                  src={url}
+                  alt="url"
+                  fill={true}
+                  draggable
+                />
+              </div>
+            ))}
+          </div>
+          <div className={styles.btn_container}>
+            <div className={styles.button}>Start Over</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default Home;
